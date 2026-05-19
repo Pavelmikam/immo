@@ -1,0 +1,12 @@
+{
+  "url": "http://localhost:8000/api/auth/profile",
+  "method": "PUT",
+  "description": "Test de mise à jour du profil utilisateur (nécessite token d'authentification)",
+  "headers": {
+    "Authorization": "Bearer YOUR_TOKEN_HERE"
+  },
+  "body": {
+    "name": "Jean Dupont Modifié",
+    "email": "jean.dupont.modifie@example.com"
+  }
+}

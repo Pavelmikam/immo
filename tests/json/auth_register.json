@@ -1,0 +1,11 @@
+{
+  "url": "http://localhost:8000/api/auth/register",
+  "method": "POST",
+  "description": "Test d'inscription d'un nouvel utilisateur",
+  "body": {
+    "name": "Jean Dupont",
+    "email": "jean.dupont@example.com",
+    "password": "Password123!",
+    "password_confirmation": "Password123!"
+  }
+}
