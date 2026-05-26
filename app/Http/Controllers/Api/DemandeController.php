@@ -71,6 +71,16 @@ class DemandeController extends Controller
         return response()->json($demande->fresh());
     }
 
+    public function mesDemandes(Request $request): JsonResponse
+    {
+        $demandes = Demande::with('bien.typeBien')
+            ->where('user_id', $request->user()->id)
+            ->latest()
+            ->paginate(20);
+
+        return response()->json($demandes);
+    }
+
     public function destroy(Request $request, int $id): JsonResponse
     {
         $demande = Demande::findOrFail($id);

@@ -123,4 +123,15 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'avatar_disk'        => env('AVATAR_DISK', 'public'),
+    'avatar_max_size'    => env('AVATAR_MAX_SIZE', 2048),
+    'avatar_width'       => env('AVATAR_WIDTH', 400),
+    'avatar_thumb_width' => env('AVATAR_THUMB_WIDTH', 80),
+
+    'media_disk'                    => env('MEDIA_DISK', 'media'),
+    'property_image_max_size'       => env('PROPERTY_IMAGE_MAX_SIZE', 5120),
+    'property_image_optimize_width' => env('PROPERTY_IMAGE_OPTIMIZE_WIDTH', 1200),
+    'property_image_thumb_width'    => env('PROPERTY_IMAGE_THUMB_WIDTH', 400),
+    'property_image_thumb_height'   => env('PROPERTY_IMAGE_THUMB_HEIGHT', 300),
+
 ];

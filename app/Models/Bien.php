@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Bien extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'titre',
         'description',
@@ -17,6 +20,7 @@ class Bien extends Model
         'nb_chambres',
         'nb_salles_bain',
         'adresse',
+        'quartier',
         'ville',
         'code_postal',
         'statut',
@@ -24,6 +28,7 @@ class Bien extends Model
         'type_bien_id',
         'user_id',
         'agent_id',
+        'ville_id',
     ];
 
     protected $casts = [
@@ -50,8 +55,18 @@ class Bien extends Model
         return $this->belongsTo(Agent::class);
     }
 
+    public function ville(): BelongsTo
+    {
+        return $this->belongsTo(Ville::class);
+    }
+
     public function demandes(): HasMany
     {
         return $this->hasMany(Demande::class);
+    }
+
+    public function favoris(): HasMany
+    {
+        return $this->hasMany(Favori::class);
     }
 }

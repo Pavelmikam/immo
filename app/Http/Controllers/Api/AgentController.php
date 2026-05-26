@@ -27,6 +27,16 @@ class AgentController extends Controller
         return response()->json($agent);
     }
 
+    public function monProfil(Request $request): JsonResponse
+    {
+        $agent = Agent::with('user')
+            ->withCount('biens')
+            ->where('user_id', $request->user()->id)
+            ->firstOrFail();
+
+        return response()->json($agent);
+    }
+
     public function store(Request $request): JsonResponse
     {
         if ($request->user()->agent) {

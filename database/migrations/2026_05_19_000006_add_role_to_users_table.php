@@ -1,22 +1,10 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
+// Role column is now part of the base users migration (0001_01_01_000000).
 return new class extends Migration
 {
-    public function up(): void
-    {
-        Schema::table('users', function (Blueprint $table) {
-            $table->enum('role', ['user', 'agent', 'admin'])->default('user')->after('email');
-        });
-    }
-
-    public function down(): void
-    {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn('role');
-        });
-    }
+    public function up(): void {}
+    public function down(): void {}
 };

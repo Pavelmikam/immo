@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan *)",
+      "Bash(php -r \"echo file_exists\\('vendor/pestphp/pest/bin/pest'\\) ? 'pest installed' : 'not yet';\")",
+      "Bash(composer require *)",
+      "Bash(dir vendor\\\\pestphp)"
+    ]
+  }
+}

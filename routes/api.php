@@ -1,67 +1,94 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\BienController;
-use App\Http\Controllers\Api\TypeBienController;
-use App\Http\Controllers\Api\AgentController;
-use App\Http\Controllers\Api\DemandeController;
+use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\PropertyController;
+use App\Http\Controllers\Api\PropertyImageController;
+use App\Http\Controllers\Api\SavedSearchController;
+use App\Http\Controllers\Api\UserController;
+use Illuminate\Support\Facades\Route;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes — ImmoConnect
-|--------------------------------------------------------------------------
-*/
+// ─── Auth publique ────────────────────────────────────────────────────────────
+Route::prefix('auth')->name('api.auth.')->group(function () {
+    Route::post('register', [AuthController::class, 'register'])->name('register');
+    Route::post('login',    [AuthController::class, 'login'])->name('login');
 
-// Authentification
-Route::prefix('auth')->group(function () {
-    Route::post('register', [AuthController::class, 'register']);
-    Route::post('login',    [AuthController::class, 'login']);
+    Route::post('forgot-password', [AuthController::class, 'forgotPassword'])
+         ->middleware('throttle:5,1')
+         ->name('forgot-password');
 
-    Route::middleware('auth:sanctum')->group(function () {
-        Route::post('logout',  [AuthController::class, 'logout']);
-        Route::get('profile',  [AuthController::class, 'profile']);
-        Route::put('profile',  [AuthController::class, 'updateProfile']);
+    Route::post('reset-password', [AuthController::class, 'resetPassword'])
+         ->name('reset-password');
+
+    Route::get('email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])
+         ->middleware('signed')
+         ->name('verification.verify');
+});
+
+// ─── Biens publics ────────────────────────────────────────────────────────────
+// IMPORTANT: /map MUST come before /{property} to avoid 'map' being parsed as an ID
+Route::get('properties/map',        [PropertyController::class, 'map'])->name('api.properties.map');
+Route::get('properties',            [PropertyController::class, 'index'])->name('api.properties.index');
+Route::get('properties/{property}', [PropertyController::class, 'show'])->name('api.properties.show');
+
+// ─── Auth protégée ────────────────────────────────────────────────────────────
+Route::middleware(['auth:sanctum', 'active'])->group(function () {
+
+    Route::prefix('auth')->name('api.auth.')->group(function () {
+        Route::post('logout',       [AuthController::class, 'logout'])->name('logout');
+        Route::get('me',            [AuthController::class, 'me'])->name('me');
+        Route::post('email/resend', [AuthController::class, 'resendVerification'])
+             ->middleware('throttle:1,1')
+             ->name('verification.resend');
     });
-});
 
-// Biens immobiliers (publics en lecture, protégés en écriture)
-Route::get('biens',          [BienController::class, 'index']);
-Route::get('biens/{id}',     [BienController::class, 'show']);
+    // ─── Profil utilisateur ───────────────────────────────────────────────────
+    Route::prefix('user')->name('api.user.')->group(function () {
+        Route::get('profile',  [UserController::class, 'profile'])->name('profile');
+        Route::put('profile',  [UserController::class, 'updateProfile'])->name('update-profile');
+        Route::post('avatar',  [UserController::class, 'uploadAvatar'])->name('upload-avatar');
+        Route::put('password', [UserController::class, 'changePassword'])->name('change-password');
+    });
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('biens',         [BienController::class, 'store']);
-    Route::put('biens/{id}',     [BienController::class, 'update']);
-    Route::delete('biens/{id}',  [BienController::class, 'destroy']);
-    Route::get('mes-biens',      [BienController::class, 'mesBiens']);
-});
+    // ─── Biens immobiliers (propriétaire) ─────────────────────────────────────
+    Route::middleware(['verified.api', 'role:proprietaire'])->group(function () {
+        Route::post('properties',                   [PropertyController::class, 'store'])->name('api.properties.store');
+        Route::put('properties/{property}',         [PropertyController::class, 'update'])->name('api.properties.update');
+        Route::post('properties/{property}/submit', [PropertyController::class, 'submit'])->name('api.properties.submit');
 
-// Types de bien (référentiel public)
-Route::get('types-biens',        [TypeBienController::class, 'index']);
-Route::get('types-biens/{id}',   [TypeBienController::class, 'show']);
+        // Images
+        Route::post('properties/{property}/images',                   [PropertyImageController::class, 'store'])->name('api.property-images.store');
+        Route::delete('properties/{property}/images/{propertyImage}', [PropertyImageController::class, 'destroy'])->name('api.property-images.destroy');
+        Route::put('properties/{property}/images/reorder',            [PropertyImageController::class, 'reorder'])->name('api.property-images.reorder');
+    });
 
-Route::middleware(['auth:sanctum', 'admin'])->group(function () {
-    Route::post('types-biens',        [TypeBienController::class, 'store']);
-    Route::put('types-biens/{id}',    [TypeBienController::class, 'update']);
-    Route::delete('types-biens/{id}', [TypeBienController::class, 'destroy']);
-});
+    // Policy-driven: admin bypasses via before(); proprietaire owner-checked in policy
+    Route::post('properties/{property}/archive', [PropertyController::class, 'archive'])->name('api.properties.archive');
+    Route::delete('properties/{property}',       [PropertyController::class, 'destroy'])->name('api.properties.destroy');
 
-// Agents immobiliers
-Route::get('agents',        [AgentController::class, 'index']);
-Route::get('agents/{id}',   [AgentController::class, 'show']);
+    // ─── Favoris ─────────────────────────────────────────────────────────────
+    Route::prefix('favorites')->name('api.favorites.')->group(function () {
+        Route::get('/',                  [FavoriteController::class, 'index'])->name('index');
+        Route::post('/{property}',       [FavoriteController::class, 'toggle'])->name('toggle');
+        Route::get('/{property}/check',  [FavoriteController::class, 'check'])->name('check');
+    });
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::post('agents',         [AgentController::class, 'store']);
-    Route::put('agents/{id}',    [AgentController::class, 'update']);
-    Route::delete('agents/{id}', [AgentController::class, 'destroy']);
-});
+    // ─── Recherches sauvegardées ──────────────────────────────────────────────
+    Route::prefix('saved-searches')->name('api.saved-searches.')->group(function () {
+        Route::get('/',                                     [SavedSearchController::class, 'index'])->name('index');
+        Route::post('/',                                    [SavedSearchController::class, 'store'])->name('store');
+        Route::get('/{savedSearch}',                        [SavedSearchController::class, 'show'])->name('show');
+        Route::put('/{savedSearch}',                        [SavedSearchController::class, 'update'])->name('update');
+        Route::delete('/{savedSearch}',                     [SavedSearchController::class, 'destroy'])->name('destroy');
+        Route::patch('/{savedSearch}/toggle-notifications', [SavedSearchController::class, 'toggleNotifications'])->name('toggle-notifications');
+        Route::get('/{savedSearch}/results',                [SavedSearchController::class, 'results'])->name('results');
+    });
 
-// Demandes de contact / renseignements
-Route::post('demandes', [DemandeController::class, 'store']);
-
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('demandes',        [DemandeController::class, 'index']);
-    Route::get('demandes/{id}',   [DemandeController::class, 'show']);
-    Route::put('demandes/{id}',   [DemandeController::class, 'update']);
-    Route::delete('demandes/{id}',[DemandeController::class, 'destroy']);
+    // ─── Admin ────────────────────────────────────────────────────────────────
+    Route::prefix('admin')->name('api.admin.')->middleware('role:admin')->group(function () {
+        Route::get('properties', [\App\Http\Controllers\Api\Admin\PropertyController::class, 'index'])
+             ->name('properties.index');
+        Route::post('properties/{property}/moderate', [\App\Http\Controllers\Api\Admin\PropertyController::class, 'moderate'])
+             ->name('properties.moderate');
+    });
 });

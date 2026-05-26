@@ -3,75 +3,122 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\ForgotPasswordRequest;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Requests\Auth\ResetPasswordRequest;
+use App\Http\Resources\AuthResource;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\URL;
 
 class AuthController extends Controller
 {
-    public function register(Request $request): JsonResponse
+    public function register(RegisterRequest $request): JsonResponse
     {
-        $data = $request->validate([
-            'name'     => 'required|string|max:255',
-            'email'    => 'required|email|unique:users,email',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+        $user = User::create($request->validated());
 
-        $user  = User::create($data);
-        $token = $user->createToken('api-token')->plainTextToken;
+        $user->sendEmailVerificationNotification();
 
-        return response()->json([
-            'user'  => $user,
-            'token' => $token,
-        ], 201);
+        $abilities = ['role:' . $user->role];
+        $token = $user->createToken('api-token', $abilities)->plainTextToken;
+
+        return (new AuthResource($user, $token))->response()->setStatusCode(201);
     }
 
-    public function login(Request $request): JsonResponse
+    public function login(LoginRequest $request): JsonResponse
     {
-        $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required|string',
-        ]);
-
         if (! Auth::attempt($request->only('email', 'password'))) {
-            throw ValidationException::withMessages([
-                'email' => ['Les identifiants sont incorrects.'],
-            ]);
+            return response()->json(['message' => 'Identifiants incorrects.'], 401);
         }
 
-        $user  = Auth::user();
-        $token = $user->createToken('api-token')->plainTextToken;
+        $user = Auth::user();
 
-        return response()->json([
-            'user'  => $user,
-            'token' => $token,
-        ]);
+        if (! $user->is_active) {
+            Auth::logout();
+            return response()->json([
+                'message' => 'Votre compte est suspendu. Contactez l\'administration.',
+                'code'    => 'ACCOUNT_SUSPENDED',
+            ], 403);
+        }
+
+        $user->tokens()->delete();
+
+        $abilities = ['role:' . $user->role];
+        $token = $user->createToken('api-token', $abilities)->plainTextToken;
+
+        return (new AuthResource($user, $token))->response()->setStatusCode(200);
     }
 
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Déconnexion réussie.']);
+        return response()->json(null, 204);
     }
 
-    public function profile(Request $request): JsonResponse
+    public function me(Request $request): JsonResponse
     {
-        return response()->json($request->user());
+        return UserResource::make($request->user())->response()->setStatusCode(200);
     }
 
-    public function updateProfile(Request $request): JsonResponse
+    public function verifyEmail(Request $request, int $id, string $hash): JsonResponse
     {
-        $data = $request->validate([
-            'name'     => 'sometimes|string|max:255',
-            'email'    => 'sometimes|email|unique:users,email,' . $request->user()->id,
-            'password' => 'sometimes|string|min:8|confirmed',
-        ]);
+        if (! URL::hasValidSignature($request)) {
+            return response()->json(['message' => 'Lien de vérification invalide ou expiré.'], 403);
+        }
 
-        $request->user()->update($data);
+        $user = User::findOrFail($id);
 
-        return response()->json($request->user()->fresh());
+        if ($user->isEmailVerified()) {
+            return response()->json(['message' => 'Email déjà vérifié.'], 200);
+        }
+
+        $user->markEmailAsVerified();
+
+        return response()->json(['message' => 'Email vérifié avec succès.'], 200);
+    }
+
+    public function resendVerification(Request $request): JsonResponse
+    {
+        if ($request->user()->isEmailVerified()) {
+            return response()->json(['message' => 'Email déjà vérifié.'], 400);
+        }
+
+        $request->user()->sendEmailVerificationNotification();
+
+        return response()->json(['message' => 'Email de vérification renvoyé.'], 200);
+    }
+
+    public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
+    {
+        $status = Password::sendResetLink(['email' => $request->email]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json(['message' => 'Lien de réinitialisation envoyé par email.'], 200);
+        }
+
+        return response()->json(['message' => __($status)], 400);
+    }
+
+    public function resetPassword(ResetPasswordRequest $request): JsonResponse
+    {
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password) {
+                $user->update(['password' => $password]);
+                $user->tokens()->delete();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json(['message' => 'Mot de passe réinitialisé avec succès.'], 200);
+        }
+
+        return response()->json(['message' => 'Token invalide ou expiré.'], 400);
     }
 }
