@@ -3,6 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\Conversation;
+use App\Models\Property;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ConversationFactory extends Factory
@@ -12,12 +14,22 @@ class ConversationFactory extends Factory
     public function definition(): array
     {
         return [
-            'statut' => fake()->randomElement(['ouverte', 'ouverte', 'ouverte', 'fermee', 'archivee']),
+            'property_id'          => Property::factory(),
+            'initiated_by'         => User::factory()->create(['role' => 'locataire', 'email_verified_at' => now(), 'is_active' => true])->id,
+            'rental_request_id'    => null,
+            'subject'              => null,
+            'last_message_preview' => null,
+            'last_message_at'      => null,
+            'last_message_by'      => null,
+            'is_archived'          => false,
         ];
     }
 
-    public function ouverte(): static
+    public function withLastMessage(): static
     {
-        return $this->state(['statut' => 'ouverte']);
+        return $this->state([
+            'last_message_preview' => fake()->sentence(),
+            'last_message_at'      => now()->subMinutes(rand(1, 1440)),
+        ]);
     }
 }

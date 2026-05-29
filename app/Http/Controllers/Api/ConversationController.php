@@ -2,113 +2,129 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Contracts\MessagingServiceInterface;
 use App\Http\Controllers\Controller;
-use App\Models\Agent;
+use App\Http\Requests\Messaging\StartConversationRequest;
+use App\Http\Resources\ConversationListResource;
+use App\Http\Resources\ConversationResource;
+use App\Http\Resources\MessageResource;
 use App\Models\Conversation;
+use App\Models\Property;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ConversationController extends Controller
 {
+    public function __construct(private MessagingServiceInterface $service) {}
+
     public function index(Request $request): JsonResponse
     {
-        $userId = $request->user()->id;
-        $agent  = $request->user()->agent;
+        $userId   = $request->user()->id;
+        $archived = $request->boolean('archived', false);
 
-        $query = Conversation::with(['client', 'agent.user', 'bien', 'dernierMessage'])
-            ->withCount(['messages', 'messagesNonLus'])
-            ->when($request->filled('statut'), fn ($q) => $q->where('statut', $request->statut));
+        $conversations = Conversation::with([
+                'property.primaryImage',
+                'participants',
+                'lastMessageByUser',
+            ])
+            ->forUser($userId)
+            ->when(
+                $archived,
+                fn ($q) => $q->whereHas('participants', fn ($p) =>
+                    $p->where('user_id', $userId)->where('is_archived', true)
+                ),
+                fn ($q) => $q->notArchivedForUser($userId)
+            )
+            ->orderByDesc('last_message_at')
+            ->paginate(20);
 
-        // Un agent voit ses conversations ; un client voit les siennes
-        if ($agent) {
-            $query->where(fn ($q) => $q->where('client_id', $userId)->orWhere('agent_id', $agent->id));
-        } else {
-            $query->where('client_id', $userId);
+        return ConversationListResource::collection($conversations)
+                   ->response()->setStatusCode(200);
+    }
+
+    public function store(StartConversationRequest $request, Property $property): JsonResponse
+    {
+        if (!$request->user()->isLocataire()) {
+            return response()->json([
+                'message' => 'Seuls les locataires peuvent initier une conversation.',
+            ], 403);
         }
 
-        return response()->json($query->latest()->paginate(20));
-    }
+        try {
+            $conversation = $this->service->findOrCreateConversation(
+                $request->user(),
+                $property,
+                $request->validated('rental_request_id')
+            );
 
-    public function show(Request $request, int $id): JsonResponse
-    {
-        $conversation = Conversation::with(['client', 'agent.user', 'bien'])->findOrFail($id);
-
-        $this->autoriser($request, $conversation);
-
-        // Marquer les messages reçus comme lus
-        $conversation->messages()
-            ->where('sender_id', '!=', $request->user()->id)
-            ->where('lu', false)
-            ->update(['lu' => true]);
-
-        return response()->json($conversation->load('messages.sender'));
-    }
-
-    public function store(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'agent_id' => 'required|exists:agents,id',
-            'bien_id'  => 'nullable|exists:biens,id',
-            'message'  => 'required|string',
-        ]);
-
-        $clientId = $request->user()->id;
-        $agentId  = $data['agent_id'];
-        $bienId   = $data['bien_id'] ?? null;
-
-        // Empêcher un agent de se contacter lui-même
-        $agent = Agent::findOrFail($agentId);
-        if ($agent->user_id === $clientId) {
-            return response()->json(['message' => 'Vous ne pouvez pas vous contacter vous-même.'], 422);
+            $this->service->sendMessage(
+                $conversation,
+                $request->user(),
+                $request->validated('initial_message')
+            );
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        // Retrouver ou créer la conversation
-        $conversation = Conversation::firstOrCreate(
-            ['client_id' => $clientId, 'agent_id' => $agentId, 'bien_id' => $bienId],
-            ['statut' => 'ouverte']
-        );
+        $conversation->load(['property.primaryImage', 'participants', 'messages.sender']);
 
-        $conversation->messages()->create([
-            'sender_id' => $clientId,
-            'contenu'   => $data['message'],
+        return (new ConversationResource($conversation))
+                   ->response()->setStatusCode(201);
+    }
+
+    public function show(Request $request, Conversation $conversation): JsonResponse
+    {
+        $this->authorize('view', $conversation);
+
+        $this->service->markAsRead($conversation, $request->user());
+
+        $messages = $conversation->messages()
+                                 ->with(['sender', 'attachments'])
+                                 ->latest()
+                                 ->paginate(30);
+
+        $conversation->load(['property.primaryImage', 'participants']);
+
+        return response()->json([
+            'conversation' => new ConversationResource($conversation),
+            'messages'     => MessageResource::collection($messages),
         ]);
-
-        return response()->json($conversation->load(['client', 'agent.user', 'bien', 'messages.sender']), 201);
     }
 
-    public function updateStatut(Request $request, int $id): JsonResponse
+    public function markAsRead(Request $request, Conversation $conversation): JsonResponse
     {
-        $conversation = Conversation::findOrFail($id);
+        $this->authorize('view', $conversation);
 
-        $this->autoriser($request, $conversation);
+        $this->service->markAsRead($conversation, $request->user());
 
-        $data = $request->validate([
-            'statut' => 'required|in:ouverte,fermee,archivee',
+        return response()->json([
+            'message'      => 'Messages marqués comme lus.',
+            'unread_count' => 0,
         ]);
-
-        $conversation->update($data);
-
-        return response()->json($conversation->fresh());
     }
 
-    public function destroy(Request $request, int $id): JsonResponse
+    public function archive(Request $request, Conversation $conversation): JsonResponse
     {
-        $conversation = Conversation::findOrFail($id);
+        $this->authorize('archive', $conversation);
 
-        $this->autoriser($request, $conversation);
+        $this->service->archiveForUser($conversation, $request->user());
 
-        $conversation->delete();
-
-        return response()->json(['message' => 'Conversation supprimée.']);
+        return response()->json(['message' => 'Conversation archivée.']);
     }
 
-    private function autoriser(Request $request, Conversation $conversation): void
+    public function unarchive(Request $request, Conversation $conversation): JsonResponse
     {
-        $userId  = $request->user()->id;
-        $agentId = optional($request->user()->agent)->id;
+        $this->authorize('archive', $conversation);
 
-        if ($conversation->client_id !== $userId && $conversation->agent_id !== $agentId) {
-            abort(403, 'Action non autorisée.');
-        }
+        $this->service->unarchiveForUser($conversation, $request->user());
+
+        return response()->json(['message' => 'Conversation restaurée.']);
+    }
+
+    public function unreadCount(Request $request): JsonResponse
+    {
+        return response()->json([
+            'unread_count' => $this->service->getTotalUnread($request->user()),
+        ]);
     }
 }

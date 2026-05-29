@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class MessageFactory extends Factory
@@ -12,13 +14,10 @@ class MessageFactory extends Factory
     public function definition(): array
     {
         return [
-            'contenu' => fake('fr_FR')->paragraph(1),
-            'lu'      => fake()->boolean(60),
+            'conversation_id' => Conversation::factory(),
+            'sender_id'       => User::factory()->create(['role' => 'locataire', 'email_verified_at' => now(), 'is_active' => true])->id,
+            'body'            => fake()->paragraph(),
+            'type'            => 'text',
         ];
-    }
-
-    public function nonLu(): static
-    {
-        return $this->state(['lu' => false]);
     }
 }

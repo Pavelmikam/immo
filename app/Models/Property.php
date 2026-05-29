@@ -25,7 +25,7 @@ class Property extends Model
         'price', 'surface', 'rooms', 'bathrooms', 'address', 'city',
         'district', 'latitude', 'longitude', 'status', 'rejection_reason',
         'published_at', 'is_featured', 'amenities', 'available_from',
-        'views_count', 'favorites_count',
+        'views_count', 'favorites_count', 'requests_count',
     ];
 
     protected $casts = [
@@ -41,6 +41,7 @@ class Property extends Model
         'available_from' => 'date',
         'views_count'    => 'integer',
         'favorites_count'=> 'integer',
+        'requests_count' => 'integer',
     ];
 
     // ── Relations ─────────────────────────────────────────────────────────────
@@ -65,6 +66,11 @@ class Property extends Model
     public function favoritedBy(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'favorites')->withTimestamps();
+    }
+
+    public function rentalRequests(): HasMany
+    {
+        return $this->hasMany(RentalRequest::class);
     }
 
     // ── Status scopes ──────────────────────────────────────────────────────────
@@ -198,10 +204,13 @@ class Property extends Model
 
     // ── Status helpers ────────────────────────────────────────────────────────
 
-    public function isOwner(User $user): bool { return $this->user_id === $user->id; }
-    public function isDraft(): bool           { return $this->status === 'draft'; }
-    public function isPending(): bool         { return $this->status === 'pending'; }
-    public function isActive(): bool          { return $this->status === 'active'; }
-    public function isRejected(): bool        { return $this->status === 'rejected'; }
-    public function isArchived(): bool        { return $this->status === 'archived'; }
+    public function isOwner(User $user): bool    { return $this->user_id === $user->id; }
+    public function isOwnedBy(User $user): bool  { return $this->user_id === $user->id; }
+    public function isAvailable(): bool          { return $this->status === 'active'; }
+    public function isDraft(): bool              { return $this->status === 'draft'; }
+    public function isPending(): bool            { return $this->status === 'pending'; }
+    public function isActive(): bool             { return $this->status === 'active'; }
+    public function isRejected(): bool           { return $this->status === 'rejected'; }
+    public function isArchived(): bool           { return $this->status === 'archived'; }
+    public function isSousReservation(): bool    { return $this->status === 'sous_reservation'; }
 }

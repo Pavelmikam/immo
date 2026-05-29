@@ -2,79 +2,68 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Contracts\MessagingServiceInterface;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Messaging\SendMessageRequest;
+use App\Http\Resources\MessageResource;
 use App\Models\Conversation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class MessageController extends Controller
 {
-    public function index(Request $request, int $conversationId): JsonResponse
-    {
-        $conversation = Conversation::findOrFail($conversationId);
+    public function __construct(private MessagingServiceInterface $service) {}
 
-        $this->autoriser($request, $conversation);
+    public function index(Request $request, Conversation $conversation): JsonResponse
+    {
+        $this->authorize('view', $conversation);
 
         $messages = $conversation->messages()
-            ->with('sender')
-            ->oldest()
-            ->paginate(50);
+                                 ->with(['sender', 'attachments'])
+                                 ->latest()
+                                 ->paginate(
+                                     $request->integer('per_page', 30)
+                                 );
 
-        // Marquer les messages reçus comme lus
-        $conversation->messages()
-            ->where('sender_id', '!=', $request->user()->id)
-            ->where('lu', false)
-            ->update(['lu' => true]);
+        $this->service->markAsRead($conversation, $request->user());
 
-        return response()->json($messages);
+        return MessageResource::collection($messages)->response();
     }
 
-    public function store(Request $request, int $conversationId): JsonResponse
+    public function store(SendMessageRequest $request, Conversation $conversation): JsonResponse
     {
-        $conversation = Conversation::findOrFail($conversationId);
+        $this->authorize('sendMessage', $conversation);
 
-        $this->autoriser($request, $conversation);
+        $attachments = $request->file('attachments') ?? [];
 
-        if ($conversation->statut !== 'ouverte') {
-            return response()->json(['message' => 'Cette conversation est fermée.'], 422);
+        try {
+            $message = $this->service->sendMessage(
+                $conversation,
+                $request->user(),
+                $request->validated('body'),
+                $attachments
+            );
+        } catch (\DomainException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        $data = $request->validate([
-            'contenu' => 'required|string',
-        ]);
-
-        $message = $conversation->messages()->create([
-            'sender_id' => $request->user()->id,
-            'contenu'   => $data['contenu'],
-        ]);
-
-        return response()->json($message->load('sender'), 201);
+        return (new MessageResource($message->load(['sender', 'attachments'])))
+                   ->response()->setStatusCode(201);
     }
 
-    public function destroy(Request $request, int $conversationId, int $messageId): JsonResponse
+    public function since(Request $request, Conversation $conversation): JsonResponse
     {
-        $conversation = Conversation::findOrFail($conversationId);
+        $this->authorize('view', $conversation);
 
-        $this->autoriser($request, $conversation);
+        $sinceId  = $request->integer('since_id', 0);
+        $messages = $conversation->messages()
+                                 ->with(['sender', 'attachments'])
+                                 ->where('id', '>', $sinceId)
+                                 ->orderBy('created_at')
+                                 ->get();
 
-        $message = $conversation->messages()->findOrFail($messageId);
+        $this->service->markAsRead($conversation, $request->user());
 
-        if ($message->sender_id !== $request->user()->id) {
-            return response()->json(['message' => 'Vous ne pouvez supprimer que vos propres messages.'], 403);
-        }
-
-        $message->delete();
-
-        return response()->json(['message' => 'Message supprimé.']);
-    }
-
-    private function autoriser(Request $request, Conversation $conversation): void
-    {
-        $userId  = $request->user()->id;
-        $agentId = optional($request->user()->agent)->id;
-
-        if ($conversation->client_id !== $userId && $conversation->agent_id !== $agentId) {
-            abort(403, 'Action non autorisée.');
-        }
+        return MessageResource::collection($messages)->response();
     }
 }

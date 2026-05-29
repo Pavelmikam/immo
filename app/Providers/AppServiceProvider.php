@@ -2,14 +2,26 @@
 
 namespace App\Providers;
 
+use App\Contracts\DocumentServiceInterface;
 use App\Contracts\ImageServiceInterface;
+use App\Contracts\MessagingServiceInterface;
 use App\Contracts\PropertyFilterServiceInterface;
 use App\Contracts\PropertyServiceInterface;
+use App\Contracts\RentalRequestServiceInterface;
+use App\Models\Conversation;
 use App\Models\Property;
+use App\Models\RentalDocument;
+use App\Models\RentalRequest;
+use App\Policies\ConversationPolicy;
 use App\Policies\PropertyPolicy;
+use App\Policies\RentalDocumentPolicy;
+use App\Policies\RentalRequestPolicy;
+use App\Services\DocumentService;
 use App\Services\ImageService;
+use App\Services\MessagingService;
 use App\Services\PropertyFilterService;
 use App\Services\PropertyService;
+use App\Services\RentalRequestService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Gate;
@@ -23,11 +35,17 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(ImageServiceInterface::class, ImageService::class);
         $this->app->bind(PropertyServiceInterface::class, PropertyService::class);
         $this->app->bind(PropertyFilterServiceInterface::class, PropertyFilterService::class);
+        $this->app->bind(DocumentServiceInterface::class, DocumentService::class);
+        $this->app->bind(RentalRequestServiceInterface::class, RentalRequestService::class);
+        $this->app->bind(MessagingServiceInterface::class, MessagingService::class);
     }
 
     public function boot(): void
     {
         Gate::policy(Property::class, PropertyPolicy::class);
+        Gate::policy(RentalRequest::class, RentalRequestPolicy::class);
+        Gate::policy(RentalDocument::class, RentalDocumentPolicy::class);
+        Gate::policy(Conversation::class, ConversationPolicy::class);
 
         VerifyEmail::createUrlUsing(function ($notifiable) {
             return URL::temporarySignedRoute(

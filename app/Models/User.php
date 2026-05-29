@@ -79,7 +79,38 @@ class User extends Authenticatable
         return $this->hasMany(SavedSearch::class);
     }
 
+    public function rentalRequests(): HasMany
+    {
+        return $this->hasMany(RentalRequest::class, 'tenant_id');
+    }
+
+    public function conversations(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Conversation::class,
+            'conversation_participants'
+        )->withPivot([
+            'unread_count', 'last_read_at', 'is_archived', 'left_at',
+        ])->withTimestamps()
+          ->orderByPivot('updated_at', 'desc');
+    }
+
+    public function getTotalUnreadCount(): int
+    {
+        return (int) $this->conversations()
+                          ->wherePivot('left_at', null)
+                          ->sum('conversation_participants.unread_count');
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    public function hasActiveDemandFor(int $propertyId): bool
+    {
+        return $this->rentalRequests()
+                    ->where('property_id', $propertyId)
+                    ->whereIn('status', ['en_attente', 'acceptee'])
+                    ->exists();
+    }
 
     public function hasFavorited(int $propertyId): bool
     {

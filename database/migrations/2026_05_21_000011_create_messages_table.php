@@ -1,27 +1,11 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
+// This migration file is superseded by 2026_05_26_100003_create_messages_table.php
+// Kept as a no-op to preserve migration order integrity.
 return new class extends Migration
 {
-    public function up(): void
-    {
-        Schema::create('messages', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('conversation_id')->constrained('conversations')->cascadeOnDelete();
-            $table->foreignId('sender_id')->constrained('users')->cascadeOnDelete();
-            $table->text('contenu');
-            $table->boolean('lu')->default(false);
-            $table->timestamps();
-
-            $table->index(['conversation_id', 'created_at']);
-        });
-    }
-
-    public function down(): void
-    {
-        Schema::dropIfExists('messages');
-    }
+    public function up(): void {}
+    public function down(): void {}
 };
