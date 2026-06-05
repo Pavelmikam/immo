@@ -39,7 +39,10 @@ class RentalRequestService implements RentalRequestServiceInterface
 
             Property::withoutTimestamps(fn () => $property->increment('requests_count'));
 
-            return $rentalRequest->load(['property', 'tenant', 'documents']);
+            $rentalRequest = $rentalRequest->load(['property', 'tenant', 'documents']);
+            event(new \App\Events\RentalRequestCreated($rentalRequest));
+
+            return $rentalRequest;
         });
     }
 
@@ -69,7 +72,10 @@ class RentalRequestService implements RentalRequestServiceInterface
                 fn () => $request->property->update(['status' => 'sous_reservation'])
             );
 
-            return $request->fresh()->load(['property', 'tenant', 'documents']);
+            $result = $request->fresh()->load(['property', 'tenant', 'documents']);
+            event(new \App\Events\RentalRequestAccepted($result));
+
+            return $result;
         });
     }
 
@@ -85,7 +91,10 @@ class RentalRequestService implements RentalRequestServiceInterface
             'decided_at'     => now(),
         ]);
 
-        return $request->fresh()->load(['property', 'tenant', 'documents']);
+        $result = $request->fresh()->load(['property', 'tenant', 'documents']);
+        event(new \App\Events\RentalRequestRefused($result));
+
+        return $result;
     }
 
     public function cancelRequest(RentalRequest $request, User $tenant): RentalRequest

@@ -105,7 +105,10 @@ class MessagingService implements MessagingServiceInterface
                 'unread_count' => 0,
             ]);
 
-            return $message->load('attachments', 'sender');
+            $message = $message->load('attachments', 'sender');
+            event(new \App\Events\MessageSent($message));
+
+            return $message;
         });
     }
 

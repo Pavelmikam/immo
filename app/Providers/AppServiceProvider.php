@@ -24,6 +24,7 @@ use App\Services\PropertyService;
 use App\Services\RentalRequestService;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -46,6 +47,31 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(RentalRequest::class, RentalRequestPolicy::class);
         Gate::policy(RentalDocument::class, RentalDocumentPolicy::class);
         Gate::policy(Conversation::class, ConversationPolicy::class);
+
+        Event::listen(
+            \App\Events\PropertyApproved::class,
+            \App\Listeners\SendPropertyApprovedNotification::class
+        );
+        Event::listen(
+            \App\Events\PropertyRejected::class,
+            \App\Listeners\SendPropertyRejectedNotification::class
+        );
+        Event::listen(
+            \App\Events\RentalRequestCreated::class,
+            \App\Listeners\SendRentalRequestReceivedNotification::class
+        );
+        Event::listen(
+            \App\Events\RentalRequestAccepted::class,
+            \App\Listeners\SendRentalRequestAcceptedNotification::class
+        );
+        Event::listen(
+            \App\Events\RentalRequestRefused::class,
+            \App\Listeners\SendRentalRequestRefusedNotification::class
+        );
+        Event::listen(
+            \App\Events\MessageSent::class,
+            \App\Listeners\SendMessageReceivedNotification::class
+        );
 
         VerifyEmail::createUrlUsing(function ($notifiable) {
             return URL::temporarySignedRoute(

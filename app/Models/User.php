@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -100,6 +101,25 @@ class User extends Authenticatable
         return (int) $this->conversations()
                           ->wherePivot('left_at', null)
                           ->sum('conversation_participants.unread_count');
+    }
+
+    public function notificationPreference(): HasOne
+    {
+        return $this->hasOne(NotificationPreference::class);
+    }
+
+    public function getOrCreateNotificationPreferences(): NotificationPreference
+    {
+        return $this->notificationPreference()
+                    ->firstOrCreate([], [
+                        'channels'      => ['mail' => true, 'database' => true],
+                        'enabled_types' => [],
+                    ]);
+    }
+
+    public function getUnreadNotificationsCount(): int
+    {
+        return $this->unreadNotifications()->count();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

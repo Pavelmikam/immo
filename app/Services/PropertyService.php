@@ -69,7 +69,11 @@ class PropertyService implements PropertyServiceInterface
             'status'       => 'active',
             'published_at' => $property->published_at ?? now(),
         ]);
-        return $property->fresh();
+
+        $property = $property->fresh();
+        event(new \App\Events\PropertyApproved($property));
+
+        return $property;
     }
 
     public function reject(Property $property, string $reason): Property
@@ -78,7 +82,11 @@ class PropertyService implements PropertyServiceInterface
             'status'           => 'rejected',
             'rejection_reason' => $reason,
         ]);
-        return $property->fresh();
+
+        $property = $property->fresh();
+        event(new \App\Events\PropertyRejected($property));
+
+        return $property;
     }
 
     public function archive(Property $property): Property

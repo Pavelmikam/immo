@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConversationController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\MessageController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\NotificationPreferenceController;
 use App\Http\Controllers\Api\PropertyController;
 use App\Http\Controllers\Api\PropertyImageController;
 use App\Http\Controllers\Api\RentalDocumentController;
@@ -148,5 +150,20 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::post('/',     [MessageController::class, 'store'])->name('store');
         Route::get('/since', [MessageController::class, 'since'])->name('since');
         // ⚠️ PAS de PUT/{message} ni DELETE/{message} — messages immuables
+    });
+
+    // ─── Notifications ────────────────────────────────────────────────────────
+    Route::prefix('notifications')->name('api.notifications.')->group(function () {
+        Route::get('/',                          [NotificationController::class, 'index'])->name('index');
+        Route::get('/unread-count',              [NotificationController::class, 'unreadCount'])->name('unread-count');
+        Route::post('/mark-all-read',            [NotificationController::class, 'markAllAsRead'])->name('mark-all-read');
+        Route::post('/{notificationId}/read',    [NotificationController::class, 'markAsRead'])->name('mark-read');
+        Route::delete('/{notificationId}',       [NotificationController::class, 'destroy'])->name('destroy');
+    });
+
+    // ─── Préférences de notification ─────────────────────────────────────────
+    Route::prefix('notification-preferences')->name('api.notification-preferences.')->group(function () {
+        Route::get('/',  [NotificationPreferenceController::class, 'show'])->name('show');
+        Route::put('/',  [NotificationPreferenceController::class, 'update'])->name('update');
     });
 });

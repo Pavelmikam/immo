@@ -129,6 +129,11 @@ class RentalRequestController extends Controller
             'visit_confirmed'    => false,
         ]);
 
+        $rentalRequest->refresh()->load(['property', 'tenant']);
+        $rentalRequest->tenant->notify(
+            new \App\Notifications\VisitScheduledNotification($rentalRequest)
+        );
+
         return response()->json(['message' => 'Visite planifiée.']);
     }
 
