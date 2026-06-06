@@ -24,6 +24,12 @@ trait CreatesProperties
         return Property::factory()->for($owner, 'owner')->active()->create($attrs);
     }
 
+    protected function createApprovedProperty(?User $owner = null, array $attrs = []): Property
+    {
+        $owner = $owner ?? $this->makeProprietaire();
+        return Property::factory()->for($owner, 'owner')->active()->create($attrs);
+    }
+
     protected function attachFakeImages(Property $property, int $count = 1): void
     {
         Storage::fake('media');

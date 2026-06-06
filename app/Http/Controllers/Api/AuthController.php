@@ -74,6 +74,10 @@ class AuthController extends Controller
 
         $user = User::findOrFail($id);
 
+        if (! hash_equals(sha1($user->getEmailForVerification()), $hash)) {
+            return response()->json(['message' => 'Lien de vérification invalide ou expiré.'], 403);
+        }
+
         if ($user->isEmailVerified()) {
             return response()->json(['message' => 'Email déjà vérifié.'], 200);
         }

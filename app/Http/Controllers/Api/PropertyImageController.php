@@ -10,6 +10,7 @@ use App\Http\Resources\Property\PropertyImageResource;
 use App\Models\Property;
 use App\Models\PropertyImage;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class PropertyImageController extends Controller
 {
@@ -68,17 +69,18 @@ class PropertyImageController extends Controller
 
         $imageIds = $request->input('order');
 
-        foreach ($imageIds as $index => $imageId) {
-            $property->images()
-                ->where('id', $imageId)
-                ->update(['order' => $index + 1]);
-        }
+        DB::transaction(function () use ($property, $imageIds) {
+            foreach ($imageIds as $index => $imageId) {
+                $property->images()
+                    ->where('id', $imageId)
+                    ->update(['order' => $index + 1]);
+            }
 
-        // First in new order becomes primary
-        if (!empty($imageIds)) {
-            $property->images()->update(['is_primary' => false]);
-            $property->images()->where('id', $imageIds[0])->update(['is_primary' => true]);
-        }
+            if (!empty($imageIds)) {
+                $property->images()->update(['is_primary' => false]);
+                $property->images()->where('id', $imageIds[0])->update(['is_primary' => true]);
+            }
+        });
 
         return response()->json(
             PropertyImageResource::collection($property->fresh()->images),

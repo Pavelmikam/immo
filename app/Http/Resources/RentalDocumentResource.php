@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\URL;
 
 class RentalDocumentResource extends JsonResource
 {
@@ -21,6 +22,11 @@ class RentalDocumentResource extends JsonResource
             'is_verified'   => $this->is_verified,
             'verified_at'   => $this->verified_at,
             'created_at'    => $this->created_at,
+            'download_url'  => URL::temporarySignedRoute(
+                'api.documents.download',
+                now()->addMinutes(30),
+                ['document' => $this->id]
+            ),
         ];
     }
 }

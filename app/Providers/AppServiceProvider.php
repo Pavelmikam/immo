@@ -33,6 +33,12 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(\App\Services\AdminLogService::class);
+        $this->app->singleton(\App\Services\StatisticsService::class);
+        $this->app->bind(
+            \App\Contracts\NeighborhoodScoreServiceInterface::class,
+            \App\Services\NeighborhoodScoreService::class
+        );
         $this->app->bind(ImageServiceInterface::class, ImageService::class);
         $this->app->bind(PropertyServiceInterface::class, PropertyService::class);
         $this->app->bind(PropertyFilterServiceInterface::class, PropertyFilterService::class);

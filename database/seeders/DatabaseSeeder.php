@@ -10,8 +10,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             AdminSeeder::class,
-            // Phase 2 : PropertySeeder::class,
-            // Phase 3 : FavoriteSeeder::class,
+            AmenityCategorySeeder::class,
         ]);
     }
 }

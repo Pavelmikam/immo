@@ -18,7 +18,6 @@ class FavoriteController extends Controller
                              ->favorites()
                              ->with(['images', 'owner'])
                              ->public()
-                             ->latest('favorites.created_at')
                              ->paginate(15);
 
         return PropertyListResource::collection($favorites)->response()->setStatusCode(200);

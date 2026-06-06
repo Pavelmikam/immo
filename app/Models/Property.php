@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
+// NeighborhoodScore is referenced in getNeighborhoodScore()
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Property extends Model
@@ -71,6 +73,87 @@ class Property extends Model
     public function rentalRequests(): HasMany
     {
         return $this->hasMany(RentalRequest::class);
+    }
+
+    public function propertyViews(): HasMany
+    {
+        return $this->hasMany(PropertyView::class);
+    }
+
+    public function recordView(
+        ?int $userId,
+        ?string $sessionId,
+        ?string $ip = null,
+        ?string $userAgent = null,
+        ?string $referrer = null
+    ): bool {
+        $alreadyViewed = PropertyView::where('property_id', $this->id)
+            ->where(function ($q) use ($userId, $sessionId) {
+                if ($userId) {
+                    $q->where('user_id', $userId);
+                } elseif ($sessionId) {
+                    $q->where('session_id', $sessionId);
+                } else {
+                    $q->whereRaw('1=0');
+                }
+            })
+            ->where('viewed_at', '>=', now()->subMinutes(30))
+            ->exists();
+
+        if ($alreadyViewed) {
+            return false;
+        }
+
+        PropertyView::create([
+            'property_id' => $this->id,
+            'user_id'     => $userId,
+            'session_id'  => $sessionId,
+            'ip_address'  => $ip,
+            'user_agent'  => $userAgent,
+            'referrer'    => $referrer,
+            'viewed_at'   => now(),
+        ]);
+
+        $this->incrementViews();
+
+        return true;
+    }
+
+    public function reports(): MorphMany
+    {
+        return $this->morphMany(Report::class, 'reportable');
+    }
+
+    public function getNeighborhoodScore(): ?array
+    {
+        if (!$this->latitude || !$this->longitude) {
+            return null;
+        }
+
+        $scores = NeighborhoodScore::byCity($this->city)
+                                   ->when($this->district,
+                                       fn ($q) => $q->byNeighborhood($this->district)
+                                   )
+                                   ->get();
+
+        if ($scores->isEmpty()) {
+            return null;
+        }
+
+        $byCriterion = $scores->keyBy('criterion');
+
+        return [
+            'city'         => $this->city,
+            'neighborhood' => $this->district,
+            'global_score' => $scores->first()?->global_score,
+            'criteria'     => $byCriterion->map(fn (NeighborhoodScore $s) => [
+                'score'        => (float) $s->average_score,
+                'label'        => $s->getScoreLabel(),
+                'color'        => $s->getScoreColor(),
+                'report_count' => $s->report_count,
+            ])->toArray(),
+            'computed_at'  => $scores->first()?->computed_at?->toIso8601String(),
+        ];
     }
 
     // ── Status scopes ──────────────────────────────────────────────────────────
@@ -200,6 +283,28 @@ class Property extends Model
             'relevance'  => $query->orderBy('favorites_count', 'desc')->orderBy('views_count', 'desc'),
             default      => $query->orderBy('created_at', 'desc'), // newest
         };
+    }
+
+    // ── Counter helpers ───────────────────────────────────────────────────────
+
+    public function incrementViews(): void
+    {
+        $this->increment('views_count');
+    }
+
+    public function incrementFavorites(): void
+    {
+        $this->increment('favorites_count');
+    }
+
+    public function decrementFavorites(): void
+    {
+        $this->decrement('favorites_count');
+    }
+
+    public function incrementRequests(): void
+    {
+        $this->increment('requests_count');
     }
 
     // ── Status helpers ────────────────────────────────────────────────────────

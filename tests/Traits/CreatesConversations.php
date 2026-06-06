@@ -9,12 +9,6 @@ use App\Models\User;
 
 trait CreatesConversations
 {
-    protected function createApprovedProperty(?User $owner = null, array $attrs = []): Property
-    {
-        $owner = $owner ?? $this->makeProprietaire();
-        return Property::factory()->for($owner, 'owner')->active()->create($attrs);
-    }
-
     protected function createConversation(
         ?User $tenant = null,
         ?Property $property = null,

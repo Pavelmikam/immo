@@ -11,6 +11,7 @@ use App\Http\Requests\Search\PropertySearchRequest;
 use App\Http\Resources\Property\PropertyListResource;
 use App\Http\Resources\Property\PropertyMapResource;
 use App\Http\Resources\Property\PropertyResource;
+use App\Models\AmenityCategory;
 use App\Models\Property;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -52,7 +53,7 @@ class PropertyController extends Controller
         return PropertyMapResource::collection($properties)->response()->setStatusCode(200);
     }
 
-    public function show(Property $property): PropertyResource
+    public function show(\Illuminate\Http\Request $request, Property $property): PropertyResource
     {
         $user = auth('sanctum')->user();
 
@@ -61,6 +62,21 @@ class PropertyController extends Controller
         }
 
         $property->load(['images', 'owner']);
+
+        if (!$user || !$property->isOwnedBy($user)) {
+            $sessionId = md5(
+                ($request->ip() ?? 'unknown') . '|' .
+                ($request->userAgent() ?? 'unknown')
+            );
+
+            $property->recordView(
+                userId   : $user?->id,
+                sessionId: $sessionId,
+                ip       : $request->ip(),
+                userAgent: $request->userAgent(),
+                referrer : $request->header('Referer')
+            );
+        }
 
         return new PropertyResource($property);
     }
@@ -108,5 +124,14 @@ class PropertyController extends Controller
         $this->propertyService->delete($property);
 
         return response()->json(null, 204);
+    }
+
+    public function amenities(): JsonResponse
+    {
+        return response()->json([
+            'property_types' => AmenityCategory::propertyTypes()->orderBy('sort_order')->get(['value', 'label']),
+            'amenities'      => AmenityCategory::amenities()->orderBy('sort_order')->get(['value', 'label']),
+            'charges'        => AmenityCategory::charges()->orderBy('sort_order')->get(['value', 'label']),
+        ]);
     }
 }

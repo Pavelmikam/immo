@@ -1,7 +1,18 @@
 <?php
 
+use App\Http\Controllers\Api\Admin\AdminLogController;
+use App\Http\Controllers\Api\Admin\ExportController;
+use App\Http\Controllers\Api\Admin\NeighborhoodController as AdminNeighborhoodController;
+use App\Http\Controllers\Api\Admin\StatisticsController as AdminStatisticsController;
+use App\Http\Controllers\Api\StatisticsController;
+use App\Http\Controllers\Api\NeighborhoodController;
+use App\Http\Controllers\Api\Admin\AmenityCategoryController;
+use App\Http\Controllers\Api\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Api\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Api\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ConversationController;
+use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\NotificationController;
@@ -30,6 +41,14 @@ Route::prefix('auth')->name('api.auth.')->group(function () {
          ->middleware('signed')
          ->name('verification.verify');
 });
+
+// ─── Référentiel public ───────────────────────────────────────────────────────
+Route::get('/reference/amenities', [PropertyController::class, 'amenities'])
+     ->name('api.reference.amenities');
+
+// ─── Statistiques publiques ───────────────────────────────────────────────────
+Route::get('/properties/popular', [StatisticsController::class, 'popularProperties'])
+     ->name('api.properties.popular');
 
 // ─── Biens publics ────────────────────────────────────────────────────────────
 // IMPORTANT: /map MUST come before /{property} to avoid 'map' being parsed as an ID
@@ -166,4 +185,78 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('/',  [NotificationPreferenceController::class, 'show'])->name('show');
         Route::put('/',  [NotificationPreferenceController::class, 'update'])->name('update');
     });
+
+    // ─── Signalements utilisateurs ────────────────────────────────────────────
+    Route::prefix('reports')->name('api.reports.')->group(function () {
+        Route::post('/properties/{property}', [ReportController::class, 'storePropertyReport'])->name('property');
+        Route::post('/messages/{message}',    [ReportController::class, 'storeMessageReport'])->name('message');
+    });
+
+    // ─── Administration ───────────────────────────────────────────────────────
+    Route::middleware('role:admin')->prefix('admin')->name('api.admin.')->group(function () {
+
+        Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+
+        Route::prefix('users')->name('users.')->group(function () {
+            Route::get('/',               [AdminUserController::class, 'index'])->name('index');
+            Route::get('/{userId}',       [AdminUserController::class, 'show'])->name('show');
+            Route::post('/{user}/suspend',  [AdminUserController::class, 'suspend'])->name('suspend');
+            Route::post('/{user}/activate', [AdminUserController::class, 'activate'])->name('activate');
+            Route::delete('/{user}',       [AdminUserController::class, 'destroy'])->name('destroy');
+            Route::post('/{userId}/restore', [AdminUserController::class, 'restore'])->name('restore');
+        });
+
+        Route::prefix('reports')->name('reports.')->group(function () {
+            Route::get('/',                    [AdminReportController::class, 'index'])->name('index');
+            Route::post('/{report}/handle',    [AdminReportController::class, 'handle'])->name('handle');
+        });
+
+        Route::apiResource('amenity-categories', AmenityCategoryController::class)
+             ->names('amenity-categories')
+             ->except(['show']);
+
+        Route::get('/logs', [AdminLogController::class, 'index'])->name('logs.index');
+
+        Route::prefix('statistics')->name('statistics.')->group(function () {
+            Route::get('/advanced',       [AdminStatisticsController::class, 'advanced'])->name('advanced');
+            Route::get('/views-timeline', [AdminStatisticsController::class, 'viewsTimeline'])->name('views-timeline');
+            Route::get('/top-properties', [AdminStatisticsController::class, 'topProperties'])->name('top-properties');
+        });
+
+        Route::prefix('export')->name('export.')->group(function () {
+            Route::get('/properties',          [ExportController::class, 'exportProperties'])->name('properties');
+            Route::get('/users',               [ExportController::class, 'exportUsers'])->name('users');
+            Route::get('/rental-requests',     [ExportController::class, 'exportRentalRequests'])->name('rental-requests');
+            Route::get('/activity-report',     [ExportController::class, 'exportActivityReport'])->name('activity-report');
+            Route::get('/property-report/{property}', [ExportController::class, 'exportPropertyReport'])->name('property-report');
+        });
+
+        Route::prefix('neighborhood')->name('neighborhood.')->group(function () {
+            Route::get('/reports',                                         [AdminNeighborhoodController::class, 'index'])->name('reports.index');
+            Route::post('/reports/{neighborhoodReport}/flag',             [AdminNeighborhoodController::class, 'flag'])->name('reports.flag');
+            Route::post('/reports/{neighborhoodReport}/validate',         [AdminNeighborhoodController::class, 'validate'])->name('reports.validate');
+            Route::post('/recompute',                                      [AdminNeighborhoodController::class, 'recompute'])->name('recompute');
+        });
+    });
+});
+
+// ─── Score de quartier (public) ───────────────────────────────────────────────
+Route::prefix('neighborhood')->name('api.neighborhood.')->group(function () {
+    Route::get('/score',               [NeighborhoodController::class, 'score'])->name('score');
+    Route::get('/history',             [NeighborhoodController::class, 'history'])->name('history');
+    Route::get('/property/{property}', [NeighborhoodController::class, 'scoreForProperty'])->name('property-score');
+});
+
+// ─── Score de quartier (authentifié) ─────────────────────────────────────────
+Route::middleware(['auth:sanctum', 'active'])->prefix('neighborhood')->name('api.neighborhood.')->group(function () {
+    Route::post('/report',     [NeighborhoodController::class, 'submit'])->name('submit');
+    Route::get('/my-reports',  [NeighborhoodController::class, 'myReports'])->name('my-reports');
+    Route::get('/my-profile',  [NeighborhoodController::class, 'myProfile'])->name('my-profile');
+});
+
+// ─── Statistiques utilisateurs ────────────────────────────────────────────────
+Route::middleware(['auth:sanctum', 'active'])->prefix('statistics')->name('api.statistics.')->group(function () {
+    Route::get('/property/{property}', [StatisticsController::class, 'propertyStats'])->name('property');
+    Route::get('/owner-dashboard',     [StatisticsController::class, 'ownerDashboard'])->name('owner-dashboard');
+    Route::get('/tenant-dashboard',    [StatisticsController::class, 'tenantDashboard'])->name('tenant-dashboard');
 });

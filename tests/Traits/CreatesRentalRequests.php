@@ -47,9 +47,4 @@ trait CreatesRentalRequests
         return $request->load('documents');
     }
 
-    protected function createApprovedProperty(?User $owner = null, array $attrs = []): Property
-    {
-        $owner = $owner ?? $this->makeProprietaire();
-        return Property::factory()->for($owner, 'owner')->active()->create($attrs);
-    }
 }

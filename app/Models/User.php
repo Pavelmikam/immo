@@ -122,6 +122,41 @@ class User extends Authenticatable
         return $this->unreadNotifications()->count();
     }
 
+    public function adminLogs(): HasMany
+    {
+        return $this->hasMany(AdminLog::class, 'admin_id');
+    }
+
+    public function reportsSubmitted(): HasMany
+    {
+        return $this->hasMany(Report::class, 'reporter_id');
+    }
+
+    public function neighborhoodReports(): HasMany
+    {
+        return $this->hasMany(NeighborhoodReport::class);
+    }
+
+    public function contributorBadges(): HasMany
+    {
+        return $this->hasMany(ContributorBadge::class);
+    }
+
+    public function hasBadge(string $badge): bool
+    {
+        if ($this->relationLoaded('contributorBadges')) {
+            return $this->contributorBadges->contains('badge', $badge);
+        }
+        return $this->contributorBadges()->where('badge', $badge)->exists();
+    }
+
+    public function addContributorPoints(int $points): void
+    {
+        static::withoutTimestamps(function () use ($points) {
+            $this->increment('contributor_points', $points);
+        });
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     public function hasActiveDemandFor(int $propertyId): bool

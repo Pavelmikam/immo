@@ -39,8 +39,12 @@ class PropertyResource extends JsonResource
                 $user = auth()->guard('sanctum')->user();
                 return $user ? $user->hasFavorited($this->id) : false;
             })(),
-            'images'           => PropertyImageResource::collection($this->whenLoaded('images')),
-            'owner'            => new UserResource($this->whenLoaded('owner')),
+            'images'             => PropertyImageResource::collection($this->whenLoaded('images')),
+            'owner'              => new UserResource($this->whenLoaded('owner')),
+            'neighborhood_score' => $this->when(
+                $this->latitude && $this->longitude,
+                fn () => $this->getNeighborhoodScore()
+            ),
             'created_at'       => $this->created_at->toIso8601String(),
             'updated_at'       => $this->updated_at->toIso8601String(),
         ];

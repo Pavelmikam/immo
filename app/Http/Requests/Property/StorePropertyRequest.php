@@ -27,6 +27,9 @@ class StorePropertyRequest extends FormRequest
             'district'         => ['nullable', 'string', 'max:100'],
             'latitude'         => ['nullable', 'numeric', 'between:-90,90'],
             'longitude'        => ['nullable', 'numeric', 'between:-180,180'],
+            'amenities'        => ['nullable', 'array'],
+            'amenities.*'      => ['string', 'max:100'],
+            'available_from'   => ['nullable', 'date', 'after_or_equal:today'],
         ];
     }
 

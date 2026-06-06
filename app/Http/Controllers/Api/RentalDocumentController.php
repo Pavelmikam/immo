@@ -66,11 +66,7 @@ class RentalDocumentController extends Controller
     {
         $this->authorize('view', $document);
 
-        $signature = $request->query('signature');
-        $expires   = (int) $request->query('expires', 0);
-        $expected  = hash_hmac('sha256', $document->id . $document->file_path, config('app.key'));
-
-        if ($signature !== $expected || now()->timestamp > $expires) {
+        if (! \Illuminate\Support\Facades\URL::hasValidSignature($request)) {
             return response()->json(['message' => 'Lien expiré ou invalide.'], 403);
         }
 

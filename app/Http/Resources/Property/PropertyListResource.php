@@ -32,8 +32,12 @@ class PropertyListResource extends JsonResource
             'is_featured'      => $this->is_featured,
             'thumbnail_url'    => $primary?->thumbnail_url,
             'published_at'     => $this->published_at?->toIso8601String(),
-            'favorites_count'  => $this->favorites_count,
-            'is_favorited'     => $user ? $user->hasFavorited($this->id) : false,
+            'favorites_count'         => $this->favorites_count,
+            'is_favorited'            => $user ? $user->hasFavorited($this->id) : false,
+            'neighborhood_global_score' => $this->when(
+                $this->latitude && $this->longitude,
+                fn () => optional($this->getNeighborhoodScore())['global_score'] ?? null
+            ),
         ];
     }
 }
