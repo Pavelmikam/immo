@@ -87,7 +87,7 @@ class PropertyController extends Controller
 
         $property = $this->propertyService->create($request->user(), $request->validated());
 
-        return response()->json(new PropertyResource($property->load('images')), 201);
+        return PropertyResource::make($property->load('images'))->response()->setStatusCode(201);
     }
 
     public function update(UpdatePropertyRequest $request, Property $property): PropertyResource
@@ -126,12 +126,55 @@ class PropertyController extends Controller
         return response()->json(null, 204);
     }
 
+    public function myProperties(Request $request): JsonResponse
+    {
+        $query = Property::byOwner(auth()->id())
+            ->with(['primaryImage'])
+            ->orderByDesc('created_at');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $perPage = (int) $request->get('per_page', 15);
+        $properties = $query->paginate($perPage);
+
+        return PropertyListResource::collection($properties)->response()->setStatusCode(200);
+    }
+
+    public function updateStatus(Request $request, Property $property): PropertyResource
+    {
+        $this->authorize('update', $property);
+
+        $request->validate([
+            'status' => ['required', 'string', 'in:draft,archived,sous_reservation'],
+        ]);
+
+        $property->update(['status' => $request->status]);
+
+        return new PropertyResource($property->load('images'));
+    }
+
     public function amenities(): JsonResponse
     {
         return response()->json([
             'property_types' => AmenityCategory::propertyTypes()->orderBy('sort_order')->get(['value', 'label']),
             'amenities'      => AmenityCategory::amenities()->orderBy('sort_order')->get(['value', 'label']),
             'charges'        => AmenityCategory::charges()->orderBy('sort_order')->get(['value', 'label']),
+        ]);
+    }
+
+    public function propertyTypes(): JsonResponse
+    {
+        return response()->json([
+            'data' => AmenityCategory::propertyTypes()->orderBy('sort_order')->get(['value', 'label']),
+        ]);
+    }
+
+    public function charges(): JsonResponse
+    {
+        return response()->json([
+            'data' => AmenityCategory::charges()->orderBy('sort_order')->get(['value', 'label']),
         ]);
     }
 }

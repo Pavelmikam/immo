@@ -15,7 +15,7 @@ class DecideRentalRequestRequest extends FormRequest
     {
         return [
             'action'         => ['required', 'string', 'in:accept,refuse'],
-            'owner_response' => ['required_if:action,refuse', 'nullable', 'string', 'min:10', 'max:500'],
+            'owner_response' => ['required_if:action,refuse', 'string', 'min:10', 'max:500'],
         ];
     }
 

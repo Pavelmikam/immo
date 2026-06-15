@@ -52,13 +52,30 @@ class CreatePropertyTest extends TestCase
         $this->postJson('/api/properties', $this->validPayload())->assertStatus(401);
     }
 
-    public function test_unverified_proprietaire_cannot_create_property(): void
+    public function test_unverified_proprietaire_can_create_draft(): void
     {
+        // Design: unverified proprietaires may create drafts; email verification is only
+        // required at submit time (route middleware: verified.api on POST /submit).
         $owner = User::factory()->proprietaire()->unverified()->create();
         $token = $this->tokenFor($owner);
 
-        $this->withToken($token)->postJson('/api/properties', $this->validPayload())
-             ->assertStatus(403);
+        $response = $this->withToken($token)->postJson('/api/properties', $this->validPayload());
+
+        $response->assertStatus(201);
+        $this->assertEquals('draft', $response->json('status'));
+    }
+
+    public function test_unverified_proprietaire_cannot_submit_property(): void
+    {
+        $owner    = User::factory()->proprietaire()->unverified()->create();
+        $token    = $this->tokenFor($owner);
+        $property = $this->makeProperty($owner, ['status' => 'draft']);
+        $this->attachFakeImages($property);
+
+        $this->withToken($token)
+             ->postJson("/api/properties/{$property->id}/submit")
+             ->assertStatus(403)
+             ->assertJsonFragment(['code' => 'EMAIL_NOT_VERIFIED']);
     }
 
     public function test_returns_422_when_required_fields_missing(): void

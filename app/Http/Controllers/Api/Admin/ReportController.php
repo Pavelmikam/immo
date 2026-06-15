@@ -34,6 +34,13 @@ class ReportController extends Controller
         return ReportResource::collection($query)->response();
     }
 
+    public function show(Report $report): JsonResponse
+    {
+        return response()->json(
+            ReportResource::make($report->load(['reporter', 'reportable', 'handledByAdmin']))
+        );
+    }
+
     public function handle(HandleReportRequest $request, Report $report): JsonResponse
     {
         if ($report->isResolved()) {

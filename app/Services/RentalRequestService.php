@@ -79,7 +79,7 @@ class RentalRequestService implements RentalRequestServiceInterface
         });
     }
 
-    public function refuseRequest(RentalRequest $request, User $owner, string $ownerResponse): RentalRequest
+    public function refuseRequest(RentalRequest $request, User $owner, ?string $ownerResponse = null): RentalRequest
     {
         if (!$request->canBeDecidedBy($owner)) {
             throw new \DomainException('Vous ne pouvez pas refuser cette demande.');

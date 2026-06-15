@@ -59,11 +59,11 @@ class NeighborhoodReport extends Model
     ): Builder {
         $latRad = deg2rad($lat);
         return $query->whereRaw(
-            '(6371 * acos(
+            '(6371 * acos(LEAST(1.0, GREATEST(-1.0,
                 cos(?) * cos(radians(latitude)) *
                 cos(radians(longitude) - ?) +
                 sin(?) * sin(radians(latitude))
-            )) <= ?',
+            )))) <= ?',
             [$latRad, deg2rad($lng), $latRad, $radiusKm]
         );
     }

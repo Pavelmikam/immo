@@ -22,6 +22,7 @@ class UserController extends Controller
                      ->when($request->has('is_active'), fn ($q) =>
                          $q->where('is_active', $request->boolean('is_active'))
                      )
+                     ->when($request->boolean('deleted'), fn ($q) => $q->onlyTrashed())
                      ->when($request->search, fn ($q) =>
                          $q->where(fn ($inner) =>
                              $inner->where('name', 'LIKE', "%{$request->search}%")
@@ -44,7 +45,7 @@ class UserController extends Controller
     public function show(Request $request, int $userId): JsonResponse
     {
         $user = User::withTrashed()->findOrFail($userId);
-        $user->loadCount(['properties', 'rentalRequests', 'reportsSubmitted']);
+        $user->loadCount(['properties', 'rentalRequests', 'reportsSubmitted', 'conversations']);
 
         return AdminUserResource::make($user)->response();
     }

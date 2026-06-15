@@ -63,6 +63,20 @@ class PropertyImageController extends Controller
         return response()->json(null, 204);
     }
 
+    public function setPrimary(Property $property, PropertyImage $propertyImage): JsonResponse
+    {
+        $this->authorize('uploadImage', $property);
+
+        abort_unless($propertyImage->property_id === $property->id, 404);
+
+        DB::transaction(function () use ($property, $propertyImage) {
+            $property->images()->update(['is_primary' => false]);
+            $propertyImage->update(['is_primary' => true]);
+        });
+
+        return response()->json(new PropertyImageResource($propertyImage->fresh()), 200);
+    }
+
     public function reorder(ReorderImagesRequest $request, Property $property): JsonResponse
     {
         $this->authorize('reorderImages', $property);

@@ -31,9 +31,14 @@ class RentalRequestController extends Controller
                                   ->whereIn('property_id', $propertyIds);
         } else {
             $query = RentalRequest::with(['property.primaryImage', 'tenant']);
-            if ($request->status) {
-                $query->where('status', $request->status);
-            }
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('property_id')) {
+            $query->where('property_id', (int) $request->property_id);
         }
 
         $requests = $query->latest()->paginate(15);

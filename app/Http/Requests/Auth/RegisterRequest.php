@@ -17,7 +17,7 @@ class RegisterRequest extends FormRequest
     {
         return [
             'name'                  => ['required', 'string', 'min:2', 'max:100'],
-            'email'                 => ['required', 'email:rfc,dns', 'unique:users,email'],
+            'email'                 => ['required', 'email:rfc', 'unique:users,email'],
             'password'              => ['required', 'string', 'min:8', 'confirmed',
                                         Password::min(8)->mixedCase()->numbers()],
             'password_confirmation' => ['required'],

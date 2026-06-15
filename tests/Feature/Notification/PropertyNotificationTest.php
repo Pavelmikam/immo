@@ -54,7 +54,7 @@ class PropertyNotificationTest extends TestCase
 
         $this->withToken($token)->postJson(
             "/api/admin/properties/{$property->id}/moderate",
-            ['action' => 'reject', 'reason' => 'Photos insuffisantes.']
+            ['action' => 'reject', 'rejection_reason' => 'Photos insuffisantes.']
         )->assertStatus(200);
 
         Notification::assertSentTo($owner, PropertyRejectedNotification::class);
@@ -71,7 +71,7 @@ class PropertyNotificationTest extends TestCase
 
         $this->withToken($token)->postJson(
             "/api/admin/properties/{$property->id}/moderate",
-            ['action' => 'reject', 'reason' => 'Photos insuffisantes.']
+            ['action' => 'reject', 'rejection_reason' => 'Photos insuffisantes.']
         );
 
         Notification::assertSentTo($owner, PropertyRejectedNotification::class,
@@ -112,7 +112,7 @@ class PropertyNotificationTest extends TestCase
 
         $this->withToken($token)->postJson(
             "/api/admin/properties/{$property->id}/moderate",
-            ['action' => 'reject', 'reason' => 'Annonce trop vague.']
+            ['action' => 'reject', 'rejection_reason' => 'Annonce trop vague.']
         );
 
         Event::assertDispatched(PropertyRejected::class,

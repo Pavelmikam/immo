@@ -10,13 +10,22 @@ class CheckRole
 {
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        if (! $request->user() || ! in_array($request->user()->role, $roles)) {
+        $user = $request->user();
+
+        if (! $user) {
             return response()->json([
-                'message' => 'Accès non autorisé.',
-                'code'    => 'FORBIDDEN',
-            ], 403);
+                'message' => 'Non authentifié.',
+                'code'    => 'UNAUTHENTICATED',
+            ], 401);
         }
 
-        return $next($request);
+        if ($user->role === 'admin' || in_array($user->role, $roles)) {
+            return $next($request);
+        }
+
+        return response()->json([
+            'message' => 'Accès non autorisé.',
+            'code'    => 'FORBIDDEN',
+        ], 403);
     }
 }

@@ -54,7 +54,7 @@ class ModeratePropertyTest extends TestCase
         $response = $this->withToken($token)
                          ->postJson("/api/admin/properties/{$property->id}/moderate", [
                              'action' => 'reject',
-                             'reason' => 'Photos de mauvaise qualité, veuillez les remplacer.',
+                             'rejection_reason' => 'Photos de mauvaise qualité, veuillez les remplacer.',
                          ]);
 
         $response->assertStatus(200)
@@ -74,7 +74,7 @@ class ModeratePropertyTest extends TestCase
                  'action' => 'reject',
              ])
              ->assertStatus(422)
-             ->assertJsonStructure(['errors' => ['reason']]);
+             ->assertJsonStructure(['errors' => ['rejection_reason']]);
     }
 
     public function test_non_admin_cannot_moderate(): void

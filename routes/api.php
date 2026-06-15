@@ -43,8 +43,9 @@ Route::prefix('auth')->name('api.auth.')->group(function () {
 });
 
 // ─── Référentiel public ───────────────────────────────────────────────────────
-Route::get('/reference/amenities', [PropertyController::class, 'amenities'])
-     ->name('api.reference.amenities');
+Route::get('/reference/amenities',      [PropertyController::class, 'amenities'])->name('api.reference.amenities');
+Route::get('/reference/property-types', [PropertyController::class, 'propertyTypes'])->name('api.reference.property-types');
+Route::get('/reference/charges',        [PropertyController::class, 'charges'])->name('api.reference.charges');
 
 // ─── Statistiques publiques ───────────────────────────────────────────────────
 Route::get('/properties/popular', [StatisticsController::class, 'popularProperties'])
@@ -76,18 +77,26 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     });
 
     // ─── Biens immobiliers (propriétaire) ─────────────────────────────────────
-    Route::middleware(['verified.api', 'role:proprietaire'])->group(function () {
-        Route::post('properties',                   [PropertyController::class, 'store'])->name('api.properties.store');
-        Route::put('properties/{property}',         [PropertyController::class, 'update'])->name('api.properties.update');
-        Route::post('properties/{property}/submit', [PropertyController::class, 'submit'])->name('api.properties.submit');
+    // Brouillons / images : pas de vérif email (submit la requiert)
+    Route::middleware(['role:proprietaire'])->group(function () {
+        Route::get('my-properties',            [PropertyController::class, 'myProperties'])->name('api.properties.my');
+        Route::post('properties',              [PropertyController::class, 'store'])->name('api.properties.store');
+        Route::put('properties/{property}',    [PropertyController::class, 'update'])->name('api.properties.update');
+
+        // Soumettre à la modération nécessite un email vérifié
+        Route::post('properties/{property}/submit', [PropertyController::class, 'submit'])
+             ->middleware('verified.api')
+             ->name('api.properties.submit');
 
         // Images
-        Route::post('properties/{property}/images',                   [PropertyImageController::class, 'store'])->name('api.property-images.store');
-        Route::delete('properties/{property}/images/{propertyImage}', [PropertyImageController::class, 'destroy'])->name('api.property-images.destroy');
-        Route::put('properties/{property}/images/reorder',            [PropertyImageController::class, 'reorder'])->name('api.property-images.reorder');
+        Route::post('properties/{property}/images',                          [PropertyImageController::class, 'store'])->name('api.property-images.store');
+        Route::delete('properties/{property}/images/{propertyImage}',        [PropertyImageController::class, 'destroy'])->name('api.property-images.destroy');
+        Route::put('properties/{property}/images/reorder',                   [PropertyImageController::class, 'reorder'])->name('api.property-images.reorder');
+        Route::patch('properties/{property}/images/{propertyImage}/primary', [PropertyImageController::class, 'setPrimary'])->name('api.property-images.set-primary');
     });
 
     // Policy-driven: admin bypasses via before(); proprietaire owner-checked in policy
+    Route::patch('properties/{property}/status', [PropertyController::class, 'updateStatus'])->name('api.properties.update-status');
     Route::post('properties/{property}/archive', [PropertyController::class, 'archive'])->name('api.properties.archive');
     Route::delete('properties/{property}',       [PropertyController::class, 'destroy'])->name('api.properties.destroy');
 
@@ -207,8 +216,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         });
 
         Route::prefix('reports')->name('reports.')->group(function () {
-            Route::get('/',                    [AdminReportController::class, 'index'])->name('index');
-            Route::post('/{report}/handle',    [AdminReportController::class, 'handle'])->name('handle');
+            Route::get('/',              [AdminReportController::class, 'index'])->name('index');
+            Route::get('/{report}',      [AdminReportController::class, 'show'])->name('show');
+            Route::post('/{report}/handle', [AdminReportController::class, 'handle'])->name('handle');
         });
 
         Route::apiResource('amenity-categories', AmenityCategoryController::class)

@@ -28,6 +28,7 @@ class AdminUserResource extends JsonResource
             'properties_count'      => $this->whenCounted('properties', fn () => $this->properties_count, fn () => $this->properties()->count()),
             'rental_requests_count' => $this->whenCounted('rentalRequests', fn () => $this->rental_requests_count, fn () => $this->rentalRequests()->count()),
             'reports_count'         => $this->whenCounted('reportsSubmitted', fn () => $this->reports_submitted_count, fn () => $this->reportsSubmitted()->count()),
+            'conversations_count'   => $this->whenCounted('conversations', fn () => $this->conversations_count, fn () => $this->conversations()->count()),
 
             'is_suspended'          => !$this->is_active,
             'is_verified'           => $this->isEmailVerified(),

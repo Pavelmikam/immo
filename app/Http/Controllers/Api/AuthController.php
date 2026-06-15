@@ -10,9 +10,11 @@ use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Resources\AuthResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Notifications\NewUserRegisteredNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\URL;
 
@@ -23,6 +25,9 @@ class AuthController extends Controller
         $user = User::create($request->validated());
 
         $user->sendEmailVerificationNotification();
+
+        $admins = User::where('role', 'admin')->where('is_active', true)->get();
+        Notification::send($admins, new NewUserRegisteredNotification($user));
 
         $abilities = ['role:' . $user->role];
         $token = $user->createToken('api-token', $abilities)->plainTextToken;

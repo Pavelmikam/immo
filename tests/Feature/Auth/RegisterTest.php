@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Notifications\NewUserRegisteredNotification;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -115,5 +116,43 @@ class RegisterTest extends TestCase
         ])->assertStatus(201);
 
         $this->assertEquals('+237655123456', User::where('email', 'alain@example.cm')->first()->phone);
+    }
+
+    public function test_admins_notifies_quand_nouvel_utilisateur_inscrit(): void
+    {
+        Notification::fake();
+
+        $admin1 = User::factory()->create(['role' => 'admin', 'is_active' => true]);
+        $admin2 = User::factory()->create(['role' => 'admin', 'is_active' => true]);
+
+        $this->postJson('/api/auth/register', [
+            'name'                  => 'Nouveau Client',
+            'email'                 => 'nouveau@example.cm',
+            'password'              => 'Password1',
+            'password_confirmation' => 'Password1',
+            'role'                  => 'locataire',
+        ])->assertStatus(201);
+
+        Notification::assertSentTo($admin1, NewUserRegisteredNotification::class);
+        Notification::assertSentTo($admin2, NewUserRegisteredNotification::class);
+    }
+
+    public function test_admin_suspendu_ne_recoit_pas_notification_inscription(): void
+    {
+        Notification::fake();
+
+        $activeAdmin    = User::factory()->create(['role' => 'admin', 'is_active' => true]);
+        $suspendedAdmin = User::factory()->create(['role' => 'admin', 'is_active' => false]);
+
+        $this->postJson('/api/auth/register', [
+            'name'                  => 'Autre Client',
+            'email'                 => 'autre@example.cm',
+            'password'              => 'Password1',
+            'password_confirmation' => 'Password1',
+            'role'                  => 'proprietaire',
+        ])->assertStatus(201);
+
+        Notification::assertSentTo($activeAdmin, NewUserRegisteredNotification::class);
+        Notification::assertNotSentTo($suspendedAdmin, NewUserRegisteredNotification::class);
     }
 }

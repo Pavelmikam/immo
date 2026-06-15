@@ -55,6 +55,10 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Conversation::class, ConversationPolicy::class);
 
         Event::listen(
+            \App\Events\PropertySubmitted::class,
+            \App\Listeners\SendPropertySubmittedNotification::class
+        );
+        Event::listen(
             \App\Events\PropertyApproved::class,
             \App\Listeners\SendPropertyApprovedNotification::class
         );

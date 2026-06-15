@@ -41,10 +41,11 @@ class PropertyPolicyTest extends TestCase
         $this->assertFalse($this->policy->create($locataire));
     }
 
-    public function test_unverified_proprietaire_cannot_create(): void
+    public function test_unverified_proprietaire_can_create_draft(): void
     {
+        // Design: unverified proprietaires may create drafts; only submit requires verification.
         $unverified = User::factory()->proprietaire()->unverified()->create();
-        $this->assertFalse($this->policy->create($unverified));
+        $this->assertTrue($this->policy->create($unverified));
     }
 
     public function test_owner_can_update_draft(): void

@@ -17,7 +17,8 @@ class PropertyPolicy
 
     public function view(?User $user, Property $property): bool
     {
-        if ($property->isActive()) {
+        // active and sous_reservation are publicly visible
+        if ($property->isActive() || $property->status === 'sous_reservation') {
             return true;
         }
         if ($user === null) {
@@ -28,7 +29,7 @@ class PropertyPolicy
 
     public function create(User $user): bool
     {
-        return $user->isProprietaire() && $user->isEmailVerified();
+        return $user->isProprietaire();
     }
 
     public function update(User $user, Property $property): bool

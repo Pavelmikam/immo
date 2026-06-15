@@ -28,12 +28,20 @@ class PropertyListResource extends JsonResource
             'rooms'            => $this->rooms,
             'city'             => $this->city,
             'district'         => $this->district,
+            'neighborhood'     => $this->district,
             'status'           => $this->status,
+            'rejection_reason' => $this->when($this->rejection_reason !== null, $this->rejection_reason),
             'is_featured'      => $this->is_featured,
             'thumbnail_url'    => $primary?->thumbnail_url,
             'published_at'     => $this->published_at?->toIso8601String(),
-            'favorites_count'         => $this->favorites_count,
-            'is_favorited'            => $user ? $user->hasFavorited($this->id) : false,
+            'views_count'      => $this->views_count ?? 0,
+            'favorites_count'  => $this->favorites_count,
+            'is_favorited'     => $user ? $user->hasFavorited($this->id) : false,
+            'owner'            => $this->whenLoaded('owner', fn () => [
+                'id'    => $this->owner->id,
+                'name'  => $this->owner->name,
+                'email' => $this->owner->email,
+            ]),
             'neighborhood_global_score' => $this->when(
                 $this->latitude && $this->longitude,
                 fn () => optional($this->getNeighborhoodScore())['global_score'] ?? null

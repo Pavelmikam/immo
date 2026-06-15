@@ -67,4 +67,13 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
 
+        $exceptions->render(function (DomainException $e, Request $request) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'message' => $e->getMessage(),
+                    'code'    => 'DOMAIN_ERROR',
+                ], 422);
+            }
+        });
+
     })->create();
