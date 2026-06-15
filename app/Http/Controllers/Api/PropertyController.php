@@ -144,10 +144,10 @@ class PropertyController extends Controller
 
     public function updateStatus(Request $request, Property $property): PropertyResource
     {
-        $this->authorize('update', $property);
+        $this->authorize('updateStatus', $property);
 
         $request->validate([
-            'status' => ['required', 'string', 'in:draft,archived,sous_reservation'],
+            'status' => ['required', 'string', 'in:active,archived,sous_reservation,loue'],
         ]);
 
         $property->update(['status' => $request->status]);

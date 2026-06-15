@@ -17,8 +17,8 @@ class PropertyPolicy
 
     public function view(?User $user, Property $property): bool
     {
-        // active and sous_reservation are publicly visible
-        if ($property->isActive() || $property->status === 'sous_reservation') {
+        // active, sous_reservation, loue: accessible via direct URL
+        if ($property->isActive() || $property->isSousReservation() || $property->isLoue()) {
             return true;
         }
         if ($user === null) {
@@ -71,6 +71,12 @@ class PropertyPolicy
     public function moderate(User $user, Property $property): bool
     {
         return $user->isAdmin();
+    }
+
+    public function updateStatus(User $user, Property $property): bool
+    {
+        return $property->isOwner($user)
+            && in_array($property->status, ['active', 'sous_reservation', 'loue']);
     }
 
     public function archive(User $user, Property $property): bool

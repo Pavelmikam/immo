@@ -11,15 +11,23 @@ class AdminUserListRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge(array_map(
+            fn ($v) => $v === '' ? null : $v,
+            $this->all()
+        ));
+    }
+
     public function rules(): array
     {
         return [
-            'role'      => ['sometimes', 'in:locataire,proprietaire,admin'],
-            'is_active' => ['sometimes', 'in:0,1,true,false'],
-            'deleted'   => ['sometimes', 'in:0,1,true,false'],
-            'search'    => ['sometimes', 'string', 'max:100'],
-            'sort'      => ['sometimes', 'in:newest,oldest,name_asc,name_desc'],
-            'per_page'  => ['sometimes', 'integer', 'min:5', 'max:100'],
+            'role'      => ['sometimes', 'nullable', 'in:locataire,proprietaire,admin'],
+            'is_active' => ['sometimes', 'nullable', 'in:0,1,true,false'],
+            'deleted'   => ['sometimes', 'nullable', 'in:0,1,true,false'],
+            'search'    => ['sometimes', 'nullable', 'string', 'max:100'],
+            'sort'      => ['sometimes', 'nullable', 'in:newest,oldest,name_asc,name_desc'],
+            'per_page'  => ['sometimes', 'nullable', 'integer', 'min:5', 'max:100'],
         ];
     }
 }

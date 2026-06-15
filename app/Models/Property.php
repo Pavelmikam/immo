@@ -327,4 +327,6 @@ class Property extends Model
     public function isRejected(): bool           { return $this->status === 'rejected'; }
     public function isArchived(): bool           { return $this->status === 'archived'; }
     public function isSousReservation(): bool    { return $this->status === 'sous_reservation'; }
+    public function isLoue(): bool               { return $this->status === 'loue'; }
+    public function isUnavailable(): bool        { return in_array($this->status, ['sous_reservation', 'loue', 'archived']); }
 }

@@ -18,9 +18,11 @@ class UserController extends Controller
     public function index(AdminUserListRequest $request): JsonResponse
     {
         $query = User::withTrashed()
+                     ->withCount(['properties', 'rentalRequests'])
                      ->when($request->role, fn ($q) => $q->where('role', $request->role))
                      ->when($request->has('is_active'), fn ($q) =>
-                         $q->where('is_active', $request->boolean('is_active'))
+                         // Exclude soft-deleted when filtering by active/suspended status
+                         $q->where('is_active', $request->boolean('is_active'))->whereNull('deleted_at')
                      )
                      ->when($request->boolean('deleted'), fn ($q) => $q->onlyTrashed())
                      ->when($request->search, fn ($q) =>
