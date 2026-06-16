@@ -23,7 +23,7 @@ class MessagingService implements MessagingServiceInterface
             throw new \DomainException('Seul un locataire peut initier une conversation.');
         }
 
-        if (!$property->isAvailable()) {
+        if ($property->isDraft() || $property->isPending() || $property->isRejected() || $property->isArchived()) {
             throw new \DomainException('Impossible d\'ouvrir une conversation sur ce bien.');
         }
 

@@ -20,7 +20,7 @@ class MessageController extends Controller
 
         $messages = $conversation->messages()
                                  ->with(['sender', 'attachments'])
-                                 ->latest()
+                                 ->orderBy('created_at')
                                  ->paginate(
                                      $request->integer('per_page', 30)
                                  );

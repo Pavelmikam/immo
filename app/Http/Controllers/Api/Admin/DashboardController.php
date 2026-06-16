@@ -11,6 +11,8 @@ use App\Models\Report;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -57,6 +59,39 @@ class DashboardController extends Controller
             'generated_at' => now()->toIso8601String(),
         ];
 
-        return response()->json($stats);
+        $charts = $this->buildCharts();
+
+        return response()->json(array_merge($stats, ['charts' => $charts]));
+    }
+
+    private function buildCharts(): array
+    {
+        $months = collect(range(5, 0))->map(fn ($i) => Carbon::now()->subMonths($i));
+
+        $registrations = $months->map(function (Carbon $date) {
+            return [
+                'month' => $date->translatedFormat('M Y'),
+                'count' => User::whereYear('created_at', $date->year)
+                               ->whereMonth('created_at', $date->month)
+                               ->count(),
+            ];
+        })->values()->toArray();
+
+        $propertiesPerMonth = $months->map(function (Carbon $date) {
+            $base = Property::withTrashed()
+                            ->whereYear('created_at', $date->year)
+                            ->whereMonth('created_at', $date->month);
+            return [
+                'month'     => $date->translatedFormat('M Y'),
+                'submitted' => (clone $base)->count(),
+                'approved'  => (clone $base)->where('status', 'active')->count(),
+                'rejected'  => (clone $base)->where('status', 'rejected')->count(),
+            ];
+        })->values()->toArray();
+
+        return [
+            'registrations_per_month' => $registrations,
+            'properties_per_month'    => $propertiesPerMonth,
+        ];
     }
 }
