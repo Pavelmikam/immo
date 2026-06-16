@@ -12,10 +12,26 @@ class PropertySearchRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        // Convertit les chaînes vides en null pour éviter les échecs de validation in:...
+        $scalar = array_map(
+            fn ($v) => is_string($v) && $v === '' ? null : $v,
+            $this->except(['amenities'])
+        );
+        $this->merge($scalar);
+    }
+
     public function rules(): array
     {
-        $typeValues      = 'apartment,house,studio,villa,commercial,land';
-        $amenityValues   = 'parking,wifi,pool,gym,security,elevator,garden,balcony,generator,water';
+        $typeValues = implode(',', [
+            // valeurs françaises (frontend)
+            'chambre_simple', 'studio', 'appartement', 'maison',
+            'mini_cite', 'local_commercial', 'chambre_etudiante', 'logement_meuble',
+            // valeurs anglaises (compatibilité)
+            'apartment', 'house', 'villa', 'commercial', 'land',
+        ]);
+
         $sortValues      = 'price_asc,price_desc,newest,oldest,popular,relevance';
         $transTypeValues = 'rent,sale';
 
@@ -30,7 +46,7 @@ class PropertySearchRequest extends FormRequest
             'surface_max'      => ['sometimes', 'numeric', 'min:0', Rule::when($this->filled('surface_min'), 'gte:surface_min')],
             'rooms_min'        => ['sometimes', 'integer', 'min:1', 'max:20'],
             'amenities'        => ['sometimes', 'array'],
-            'amenities.*'      => ['string', 'in:' . $amenityValues],
+            'amenities.*'      => ['string', 'max:100'],  // aucune restriction — valeurs libres stockées en JSON
             'available_from'   => ['sometimes', 'date'],
             // nullable (not sometimes) so required_with fires even when field is absent
             'latitude'         => ['nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
