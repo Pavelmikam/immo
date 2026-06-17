@@ -128,7 +128,7 @@ class PropertyController extends Controller
 
     public function myProperties(Request $request): JsonResponse
     {
-        $query = Property::byOwner(auth()->id())
+        $query = Property::byOwner($request->user()->id)
             ->with(['primaryImage'])
             ->orderByDesc('created_at');
 

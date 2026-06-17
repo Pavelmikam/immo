@@ -5,7 +5,9 @@
       "Bash(php -r \"echo file_exists\\('vendor/pestphp/pest/bin/pest'\\) ? 'pest installed' : 'not yet';\")",
       "Bash(composer require *)",
       "Bash(dir vendor\\\\pestphp)",
-      "Bash(xargs -I {} basename {})"
+      "Bash(xargs -I {} basename {})",
+      "Bash(xargs grep -l \"\")",
+      "Bash(php -r \"require 'vendor/autoload.php'; require 'bootstrap/app.php'; echo 'OK';\")"
     ]
   }
 }

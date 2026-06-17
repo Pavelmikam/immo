@@ -8,6 +8,7 @@ use App\Http\Requests\Neighborhood\GetNeighborhoodScoreRequest;
 use App\Http\Requests\Neighborhood\SubmitNeighborhoodReportRequest;
 use App\Http\Resources\ContributorProfileResource;
 use App\Http\Resources\NeighborhoodReportResource;
+use App\Models\NeighborhoodReport;
 use App\Models\Property;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -88,5 +89,21 @@ class NeighborhoodController extends Controller
         $user = $request->user()->load('contributorBadges');
 
         return ContributorProfileResource::make($user)->response();
+    }
+
+    public function reviewsForProperty(Property $property): JsonResponse
+    {
+        if (!$property->latitude || !$property->longitude) {
+            return response()->json(['data' => []]);
+        }
+
+        $reports = NeighborhoodReport::validated()
+            ->notFlagged()
+            ->nearLocation((float) $property->latitude, (float) $property->longitude, 2.0)
+            ->with('user')
+            ->latest()
+            ->paginate(10);
+
+        return NeighborhoodReportResource::collection($reports)->response();
     }
 }

@@ -33,9 +33,7 @@ class DashboardController extends Controller
             'properties' => [
                 'total'    => Property::withTrashed()->count(),
                 'active'   => Property::where('status', 'active')->count(),
-                'pending'  => Property::where('status', 'pending')->count(),
                 'draft'    => Property::where('status', 'draft')->count(),
-                'rejected' => Property::where('status', 'rejected')->count(),
                 'archived' => Property::where('status', 'archived')->count(),
             ],
             'rental_requests' => [

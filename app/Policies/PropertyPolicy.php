@@ -34,14 +34,13 @@ class PropertyPolicy
 
     public function update(User $user, Property $property): bool
     {
-        return $property->isOwner($user)
-            && ($property->isDraft() || $property->isRejected());
+        return $property->isOwner($user) && $property->isDraft();
     }
 
     public function submit(User $user, Property $property): bool
     {
         return $property->isOwner($user)
-            && ($property->isDraft() || $property->isRejected())
+            && $property->isDraft()
             && $property->images()->count() > 0;
     }
 
@@ -53,14 +52,12 @@ class PropertyPolicy
 
     public function uploadImage(User $user, Property $property): bool
     {
-        return $property->isOwner($user)
-            && ($property->isDraft() || $property->isRejected());
+        return $property->isOwner($user) && $property->isDraft();
     }
 
     public function deleteImage(User $user, Property $property): bool
     {
-        return $property->isOwner($user)
-            && ($property->isDraft() || $property->isRejected());
+        return $property->isOwner($user) && $property->isDraft();
     }
 
     public function reorderImages(User $user, Property $property): bool

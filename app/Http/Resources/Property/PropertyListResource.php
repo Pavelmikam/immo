@@ -35,6 +35,7 @@ class PropertyListResource extends JsonResource
             'thumbnail_url'    => $primary?->thumbnail_url,
             'published_at'     => $this->published_at?->toIso8601String(),
             'views_count'      => $this->views_count ?? 0,
+            'requests_count'   => $this->requests_count ?? 0,
             'favorites_count'  => $this->favorites_count,
             'is_favorited'     => $user ? $user->hasFavorited($this->id) : false,
             'owner'            => $this->whenLoaded('owner', fn () => [

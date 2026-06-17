@@ -66,7 +66,7 @@ class StatisticsService
     {
         $start       = $this->getPeriodStart($period);
         $propertyIds = Property::byOwner($owner->id)->pluck('id')->toArray();
-        $properties  = Property::byOwner($owner->id)->get();
+        $properties  = Property::byOwner($owner->id)->withCount('rentalRequests')->get();
 
         $totalViews = empty($propertyIds) ? 0 :
             PropertyView::whereIn('property_id', $propertyIds)
@@ -105,10 +105,11 @@ class StatisticsService
                                               ->take(5)
                                               ->values()
                                               ->map(fn (Property $p) => [
-                                                  'id'          => $p->id,
-                                                  'title'       => $p->title,
-                                                  'views_count' => $p->views_count,
-                                                  'status'      => $p->status,
+                                                  'id'             => $p->id,
+                                                  'title'          => $p->title,
+                                                  'views_count'    => $p->views_count,
+                                                  'status'         => $p->status,
+                                                  'requests_count' => $p->rental_requests_count,
                                               ]),
         ];
     }

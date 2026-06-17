@@ -57,39 +57,12 @@ class PropertyService implements PropertyServiceInterface
     public function submit(Property $property): Property
     {
         $property->update([
-            'status'           => 'pending',
-            'rejection_reason' => null,
-        ]);
-
-        $property = $property->fresh();
-        event(new \App\Events\PropertySubmitted($property));
-
-        return $property;
-    }
-
-    public function approve(Property $property): Property
-    {
-        $property->update([
-            'status'           => 'active',
-            'published_at'     => $property->published_at ?? now(),
-            'rejection_reason' => null,
+            'status'       => 'active',
+            'published_at' => now(),
         ]);
 
         $property = $property->fresh();
         event(new \App\Events\PropertyApproved($property));
-
-        return $property;
-    }
-
-    public function reject(Property $property, string $reason): Property
-    {
-        $property->update([
-            'status'           => 'rejected',
-            'rejection_reason' => $reason,
-        ]);
-
-        $property = $property->fresh();
-        event(new \App\Events\PropertyRejected($property));
 
         return $property;
     }

@@ -66,7 +66,7 @@ class ConversationController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        $conversation->load(['property.primaryImage', 'participants', 'messages.sender']);
+        $conversation->load(['property.primaryImage', 'participants', 'messages.sender', 'rentalRequest']);
 
         return (new ConversationResource($conversation))
                    ->response()->setStatusCode(201);
@@ -83,7 +83,7 @@ class ConversationController extends Controller
                                  ->latest()
                                  ->paginate(30);
 
-        $conversation->load(['property.primaryImage', 'participants']);
+        $conversation->load(['property.primaryImage', 'participants', 'rentalRequest']);
 
         return response()->json([
             'conversation' => new ConversationResource($conversation),

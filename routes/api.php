@@ -122,8 +122,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::prefix('admin')->name('api.admin.')->middleware('role:admin')->group(function () {
         Route::get('properties', [\App\Http\Controllers\Api\Admin\PropertyController::class, 'index'])
              ->name('properties.index');
-        Route::post('properties/{property}/moderate', [\App\Http\Controllers\Api\Admin\PropertyController::class, 'moderate'])
-             ->name('properties.moderate');
     });
 
     // ─── Demandes de location ─────────────────────────────────────────────────
@@ -254,7 +252,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 Route::prefix('neighborhood')->name('api.neighborhood.')->group(function () {
     Route::get('/score',               [NeighborhoodController::class, 'score'])->name('score');
     Route::get('/history',             [NeighborhoodController::class, 'history'])->name('history');
-    Route::get('/property/{property}', [NeighborhoodController::class, 'scoreForProperty'])->name('property-score');
+    Route::get('/property/{property}',         [NeighborhoodController::class, 'scoreForProperty'])->name('property-score');
+    Route::get('/property/{property}/reviews', [NeighborhoodController::class, 'reviewsForProperty'])->name('property-reviews');
 });
 
 // ─── Score de quartier (authentifié) ─────────────────────────────────────────

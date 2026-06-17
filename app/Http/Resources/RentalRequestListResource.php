@@ -26,9 +26,13 @@ class RentalRequestListResource extends JsonResource
             ]),
 
             'property' => $this->whenLoaded('property', fn () => [
-                'id'    => $this->property->id,
-                'title' => $this->property->title,
-                'city'  => $this->property->city,
+                'id'            => $this->property->id,
+                'title'         => $this->property->title,
+                'city'          => $this->property->city,
+                'price'         => $this->property->price,
+                'thumbnail_url' => $this->property->relationLoaded('primaryImage')
+                    ? $this->property->primaryImage?->thumbnail_url
+                    : null,
             ]),
         ];
     }
